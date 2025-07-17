@@ -126,6 +126,84 @@ export default component$(() => {
 
 The beauty of Signal-Σ is that **the same reactive logic works everywhere**. Learn once, use everywhere!
 
+### 📝 **Featured Demo: Svelte 5 Todo App**
+
+Our comprehensive Svelte 5 todo app demonstrates the full power of Signal-Σ with Svelte runes:
+
+```svelte
+<script>
+  import {
+    useSignal,
+    useComputed,
+    usePersistentSignal,
+    useValidatedSignal,
+    useDebouncedSignal,
+    useMachine
+  } from 'resig.js/svelte';
+
+  // Persistent todos with localStorage
+  const [todos, setTodos] = usePersistentSignal('svelte-todos', []);
+
+  // Real-time validation
+  const [newTodo, setNewTodo, isValid] = useValidatedSignal('',
+    text => text.trim().length > 0
+  );
+
+  // Debounced search
+  const [searchTerm, setSearchTerm, debouncedSearch] = useDebouncedSignal('', 300);
+
+  // State machine for bulk operations
+  const [bulkState, sendBulk] = useMachine('idle', (state, action) => {
+    switch (state) {
+      case 'idle': return action === 'start_delete' ? 'deleting' : state;
+      case 'deleting': return action === 'finish' ? 'idle' : state;
+      default: return state;
+    }
+  });
+
+  // Automatic computed values - no dependency arrays!
+  const filteredTodos = useComputed(() => {
+    let filtered = todos();
+
+    if (debouncedSearch().trim()) {
+      filtered = filtered.filter(todo =>
+        todo.text.toLowerCase().includes(debouncedSearch().toLowerCase())
+      );
+    }
+
+    return filtered;
+  });
+
+  const stats = useComputed(() => ({
+    total: todos().length,
+    active: todos().filter(todo => !todo.completed).length,
+    completed: todos().filter(todo => todo.completed).length,
+    completionRate: todos().length > 0
+      ? Math.round((todos().filter(todo => todo.completed).length / todos().length) * 100)
+      : 0
+  }));
+</script>
+
+<!-- Template uses the reactive values seamlessly -->
+<div>
+  <p>Total: {stats().total} | Completion: {stats().completionRate}%</p>
+  <input bind:value={newTodo()} placeholder="Add todo..." />
+  <button on:click={addTodo} disabled={!isValid()}>Add</button>
+
+  {#each filteredTodos() as todo}
+    <div>{todo.text}</div>
+  {/each}
+</div>
+```
+
+**Key Features:**
+- 🔄 **Real-time search** with 300ms debouncing
+- 💾 **Automatic persistence** to localStorage
+- ✅ **Form validation** with visual feedback
+- 📊 **Live statistics** and completion tracking
+- 🎛️ **State machine** for bulk operations
+- 🚀 **Native Svelte 5 runes** integration
+
 ## 🌐 **Framework Adapters**
 
 Signal-Σ showcases the power of its core abstraction by providing native adapters for all major frameworks:
@@ -193,44 +271,55 @@ const [count, setCount] = useSignal(globalCounter.value());
 
 ## 📚 **Complete API Reference**
 
-Signal-Σ provides a comprehensive set of hooks and utilities organized into logical categories:
+Signal-Σ provides a comprehensive set of universal hooks that work identically across all frameworks:
 
-### 🔧 **Core Hooks**
+### 🔧 **Universal Hooks**
 
-The foundation of Signal-Σ - these replace React's basic hooks entirely.
+The foundation of Signal-Σ - these hooks work the same way in React, Svelte 5, SolidJS, Vue, and Qwik.
 
-#### `useSignal<T>(initialValue: T): [T, (value: T) => void]`
+#### `useSignal<T>(initialValue: T, plugins?: Plugin<T>): [() => T, (value: T) => void]`
 
 **Replaces:** `useState`
-**Purpose:** Basic reactive state management
+**Purpose:** Basic reactive state management with optional plugins
 
 ```tsx
-import { useSignal } from 'resig.js';
+// React
+import { useSignal } from 'resig.js/react';
+import { loggerPlugin } from 'resig.js/plugins';
 
-function BasicExample() {
+function ReactExample() {
   const [name, setName] = useSignal('Alice');
-  const [count, setCount] = useSignal(0);
+  const [count, setCount] = useSignal(0, loggerPlugin('Counter'));
   const [user, setUser] = useSignal({ id: 1, name: 'John' });
 
   return (
     <div>
-      <input value={name} onChange={(e) => setName(e.target.value)} />
-      <button onClick={() => setCount(count + 1)}>Count: {count}</button>
-      <button onClick={() => setUser({...user, name: 'Updated'})}>
+      <input value={name()} onChange={(e) => setName(e.target.value)} />
+      <button onClick={() => setCount(count() + 1)}>Count: {count()}</button>
+      <button onClick={() => setUser({...user(), name: 'Updated'})}>
         Update User
       </button>
     </div>
   );
 }
+
+// Svelte 5 - IDENTICAL API!
+import { useSignal } from 'resig.js/svelte';
+import { loggerPlugin } from 'resig.js/plugins';
+
+const [name, setName] = useSignal('Alice');
+const [count, setCount] = useSignal(0, loggerPlugin('Counter'));
 ```
 
-#### `useComputed<T>(compute: () => T): T`
+#### `useComputed<T>(compute: () => T, plugins?: Plugin<T>): () => T`
 
 **Replaces:** `useMemo`, `useCallback`, and most `useEffect` cases
 **Purpose:** Derived values with automatic dependency tracking
 
 ```tsx
-import { useSignal, useComputed } from 'resig.js';
+// React
+import { useSignal, useComputed } from 'resig.js/react';
+import { loggerPlugin } from 'resig.js/plugins';
 
 function ComputedExample() {
   const [firstName, setFirstName] = useSignal('John');
@@ -238,28 +327,66 @@ function ComputedExample() {
   const [items, setItems] = useSignal([1, 2, 3, 4, 5]);
 
   // Automatically updates when firstName or lastName changes
-  const fullName = useComputed(() => `${firstName} ${lastName}`);
-  const initials = useComputed(() => `${firstName[0]}${lastName[0]}`);
+  const fullName = useComputed(() => `${firstName()} ${lastName()}`);
+  const initials = useComputed(() => `${firstName()[0]}${lastName()[0]}`);
 
-  // Complex computations
+  // Complex computations with plugins
   const statistics = useComputed(() => ({
-    total: items.reduce((sum, item) => sum + item, 0),
-    average: items.length > 0 ? items.reduce((sum, item) => sum + item, 0) / items.length : 0,
-    max: Math.max(...items),
-    min: Math.min(...items)
-  }));
+    total: items().reduce((sum, item) => sum + item, 0),
+    average: items().length > 0 ? items().reduce((sum, item) => sum + item, 0) / items().length : 0,
+    max: Math.max(...items()),
+    min: Math.min(...items())
+  }), loggerPlugin('Statistics'));
 
   // Side effects (replaces useEffect)
   useComputed(() => {
-    document.title = `${fullName} - ${statistics.total} items`;
+    document.title = `${fullName()} - ${statistics().total} items`;
     return null; // We don't need the return value
   });
 
   return (
     <div>
-      <p>Full Name: {fullName}</p>
-      <p>Initials: {initials}</p>
-      <p>Total: {statistics.total}, Average: {statistics.average}</p>
+      <p>Full Name: {fullName()}</p>
+      <p>Initials: {initials()}</p>
+      <p>Total: {statistics().total}, Average: {statistics().average}</p>
+    </div>
+  );
+}
+
+// Svelte 5 - IDENTICAL logic!
+const [firstName, setFirstName] = useSignal('John');
+const [lastName, setLastName] = useSignal('Doe');
+const fullName = useComputed(() => `${firstName()} ${lastName()}`);
+```
+
+#### `useEffect(effect: () => void | (() => void), deps?: any[]): void`
+
+**Replaces:** `useEffect`
+**Purpose:** Side effects with automatic cleanup
+
+```tsx
+// React
+import { useSignal, useEffect } from 'resig.js/react';
+
+function EffectExample() {
+  const [count, setCount] = useSignal(0);
+  const [name, setName] = useSignal('Alice');
+
+  // Effect with dependencies
+  useEffect(() => {
+    console.log('Count changed to:', count());
+    return () => console.log('Count effect cleanup');
+  }, [count]);
+
+  // Effect without dependencies (runs on every change)
+  useEffect(() => {
+    document.title = `${name()} - Count: ${count()}`;
+  });
+
+  return (
+    <div>
+      <p>Count: {count()}</p>
+      <button onClick={() => setCount(count() + 1)}>Increment</button>
     </div>
   );
 }
@@ -269,34 +396,45 @@ function ComputedExample() {
 
 Handle asynchronous operations with built-in loading states and error handling.
 
-#### `useAsyncSignal<T>(asyncFn: () => Promise<T>, initialValue?: T)`
+#### `useAsyncSignal<T>(asyncFn: () => Promise<T>, initialValue?: T, plugins?: Plugin<T>): [() => AsyncState<T>, () => void, (value: T) => void]`
 
 **Purpose:** Manual async data fetching with refetch and optimistic updates
 
 ```tsx
-import { useSignal, useAsyncSignal } from 'resig.js';
+// React
+import { useSignal, useAsyncSignal } from 'resig.js/react';
+import { retryPlugin, loggerPlugin, compose } from 'resig.js/plugins';
 
 function UserProfile() {
   const [userId, setUserId] = useSignal(1);
 
-  const [userState, refetchUser, setUser] = useAsyncSignal(async () => {
-    const response = await fetch(`/api/users/${userId}`);
-    if (!response.ok) throw new Error('Failed to fetch user');
-    return response.json();
-  });
+  const asyncPlugins = compose(
+    retryPlugin(3, 1000),
+    loggerPlugin('UserData')
+  );
+
+  const [userState, refetchUser, setUser] = useAsyncSignal(
+    async () => {
+      const response = await fetch(`/api/users/${userId()}`);
+      if (!response.ok) throw new Error('Failed to fetch user');
+      return response.json();
+    },
+    null,
+    asyncPlugins
+  );
 
   return (
     <div>
-      {userState.loading && <div>Loading user...</div>}
-      {userState.error && <div>Error: {userState.error.message}</div>}
-      {userState.data && (
+      {userState().loading && <div>Loading user...</div>}
+      {userState().error && <div>Error: {userState().error.message}</div>}
+      {userState().data && (
         <div>
-          <h1>{userState.data.name}</h1>
-          <p>{userState.data.email}</p>
+          <h1>{userState().data.name}</h1>
+          <p>{userState().data.email}</p>
         </div>
       )}
       <button onClick={refetchUser}>Refetch User</button>
-      <button onClick={() => setUser({...userState.data, name: 'Updated Name'})}>
+      <button onClick={() => setUser({...userState().data, name: 'Updated Name'})}>
         Optimistic Update
       </button>
     </div>
@@ -390,31 +528,37 @@ function Dashboard() {
 
 ### 🤖 **State Management Hooks**
 
-Advanced state management with state machines and effects.
+Advanced state management with state machines.
 
-#### `useMachine<S, A>(initialState: S, reducer: (state: S, action: A) => S): [S, (action: A) => void]`
+#### `useMachine<S, A>(initialState: S, reducer: (state: S, action: A) => S, plugins?: Plugin<S>): [() => S, (action: A) => void]`
 
 **Replaces:** XState
 **Purpose:** Type-safe state machines with simple, predictable transitions
 
 ```tsx
-import { useMachine } from 'resig.js';
+// React
+import { useMachine } from 'resig.js/react';
+import { loggerPlugin } from 'resig.js/plugins';
 
 type State = 'idle' | 'loading' | 'success' | 'error';
 type Action = 'start' | 'success' | 'error' | 'reset';
 
 function AsyncButton() {
-  const [state, send] = useMachine<State, Action>('idle', (state, action) => {
-    switch (state) {
-      case 'idle': return action === 'start' ? 'loading' : state;
-      case 'loading':
-        return action === 'success' ? 'success' :
-               action === 'error' ? 'error' : state;
-      case 'success':
-      case 'error': return action === 'reset' ? 'idle' : state;
-      default: return state;
-    }
-  });
+  const [state, send] = useMachine<State, Action>(
+    'idle',
+    (state, action) => {
+      switch (state) {
+        case 'idle': return action === 'start' ? 'loading' : state;
+        case 'loading':
+          return action === 'success' ? 'success' :
+                 action === 'error' ? 'error' : state;
+        case 'success':
+        case 'error': return action === 'reset' ? 'idle' : state;
+        default: return state;
+      }
+    },
+    loggerPlugin('AsyncButton')
+  );
 
   const handleClick = async () => {
     send('start');
@@ -428,11 +572,11 @@ function AsyncButton() {
 
   return (
     <div>
-      <button onClick={handleClick} disabled={state === 'loading'}>
-        {state === 'loading' ? 'Loading...' : 'Click me'}
+      <button onClick={handleClick} disabled={state() === 'loading'}>
+        {state() === 'loading' ? 'Loading...' : 'Click me'}
       </button>
-      {state === 'success' && <p>✅ Success!</p>}
-      {state === 'error' && (
+      {state() === 'success' && <p>✅ Success!</p>}
+      {state() === 'error' && (
         <div>
           <p>❌ Error occurred</p>
           <button onClick={() => send('reset')}>Reset</button>
@@ -441,6 +585,9 @@ function AsyncButton() {
     </div>
   );
 }
+
+// Svelte 5 - IDENTICAL logic!
+const [state, send] = useMachine('idle', reducer, loggerPlugin('AsyncButton'));
 ```
 
 #### `useEffect<T>(initialValue: T): [T, (value: T) => void, Effect<T>]`
@@ -671,94 +818,371 @@ function FormValidation() {
 }
 ```
 
-## 🔌 **Plugin System**
+## 🔌 **Universal Plugin System**
 
-Zero-runtime cost plugins for adding features and utilities. Plugins compose cleanly together.
+The true power of Signal-Σ lies in its **universal plugin system** - write plugins once, use them across **all frameworks**. Plugins are the core reusable abstraction that transcends framework boundaries.
 
-### Core Plugins
+### 🌟 **Write Once, Use Everywhere**
 
-```tsx
+```typescript
+// Define plugins once - they work in ALL frameworks!
 import {
+  compose,
   debouncePlugin,
-  throttlePlugin,
-  cachePlugin,
-  loggerPlugin,
-  filterPlugin,
-  transformPlugin,
   validatePlugin,
+  loggerPlugin,
   persistPlugin,
-  composePlugins,
-  applyPlugin
-} from 'resig.js';
+  retryPlugin,
+  timeoutPlugin,
+  cachePlugin
+} from 'resig.js/plugins';
+
+const userInputPlugins = compose(
+  debouncePlugin(300),
+  validatePlugin((value: string) => value.length > 0),
+  loggerPlugin('UserInput')
+);
+
+const asyncDataPlugins = compose(
+  retryPlugin(3, 1000),
+  timeoutPlugin(5000),
+  cachePlugin(60000),
+  loggerPlugin('AsyncData')
+);
+
+// Use in React
+import { useSignal } from 'resig.js/react';
+const [input, setInput] = useSignal('', userInputPlugins);
+
+// Use in Svelte 5
+import { useSignal } from 'resig.js/svelte';
+const [input, setInput] = useSignal('', userInputPlugins);
+
+// Use in SolidJS
+import { useSignal } from 'resig.js/solid';
+const [input, setInput] = useSignal('', userInputPlugins);
+
+// Use in Vue
+import { useSignal } from 'resig.js/vue';
+const [input, setInput] = useSignal('', userInputPlugins);
+
+// Use in Qwik
+import { useSignal } from 'resig.js/qwik';
+const [input, setInput] = useSignal('', userInputPlugins);
+```
+
+### 🏗️ **Plugin Architecture**
+
+Plugins follow the simple pattern: `(config) => (signal) => signal`
+
+```typescript
+// Plugin interface
+type Plugin<T> = (signal: Signal<T>) => Signal<T>;
+
+// Plugin factory pattern
+const myPlugin = (config: any) => (signal: Signal<T>) => {
+  // Transform the signal while preserving reactivity
+  return signal.map(value => /* transform value */);
+};
+```
+
+### 🔧 **Core Plugins**
+
+```typescript
+import {
+  // Core plugins from Signal-Σ
+  debouncePlugin,
+  validatePlugin,
+  loggerPlugin,
+  persistPlugin,
+  stateMachinePlugin,
+
+  // Extended plugins
+  retryPlugin,
+  timeoutPlugin,
+  cachePlugin,
+  throttlePlugin,
+  transformPlugin,
+  filterPlugin,
+  historyPlugin,
+  asyncPlugin,
+  batchPlugin,
+  conditionalPlugin,
+  pipePlugin,
+
+  // Composition
+  compose
+} from 'resig.js/plugins';
 
 // Individual plugins
-const mySignal = useSignal(0);
-const debouncedSignal = applyPlugin(debouncePlugin(300))(mySignal);
-const loggedSignal = applyPlugin(loggerPlugin('MySignal'))(mySignal);
+const [count, setCount] = useSignal(0, loggerPlugin('Counter'));
+const [input, setInput] = useSignal('', debouncePlugin(300));
 
 // Compose multiple plugins
-const enhancedSignal = composePlugins(
+const [userInput, setUserInput] = useSignal('', compose(
   debouncePlugin(300),
+  validatePlugin((value: string) => value.length > 0),
+  loggerPlugin('UserInput'),
+  persistPlugin('user-input-cache')
+));
+
+// Async operations with plugins
+const [userData, refetchUser] = useAsyncSignal(
+  async () => {
+    const response = await fetch('/api/user');
+    return response.json();
+  },
+  null,
+  compose(
+    retryPlugin(3, 1000),
+    timeoutPlugin(5000),
+    loggerPlugin('UserData')
+  )
+);
+```
+
+### 🚀 **Universal Plugin Examples**
+
+The same plugin compositions work identically across **all frameworks**:
+
+#### Shared Plugin Definitions
+```typescript
+// shared-plugins.js - Works in ALL frameworks!
+import { compose, debouncePlugin, validatePlugin, loggerPlugin } from 'resig.js/plugins';
+
+export const emailPlugins = compose(
+  debouncePlugin(300),
+  validatePlugin((email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)),
+  loggerPlugin('EmailField')
+);
+
+export const searchPlugins = compose(
+  debouncePlugin(500),
+  loggerPlugin('Search')
+);
+
+export const asyncDataPlugins = compose(
+  retryPlugin(3, 1000),
+  timeoutPlugin(5000),
+  loggerPlugin('AsyncData')
+);
+```
+
+#### React Example
+```tsx
+import { useSignal, useAsyncSignal } from 'resig.js/react';
+import { emailPlugins, asyncDataPlugins } from './shared-plugins';
+
+function ReactForm() {
+  const [email, setEmail] = useSignal('', emailPlugins);
+  const [userData, refetchUser] = useAsyncSignal(
+    () => fetch('/api/user').then(r => r.json()),
+    null,
+    asyncDataPlugins
+  );
+
+  return (
+    <input
+      value={email}
+      onChange={(e) => setEmail(e.target.value)}
+      placeholder="Email..."
+    />
+  );
+}
+```
+
+#### Svelte 5 Example
+```svelte
+<script>
+  import { useSignal, useAsyncSignal } from 'resig.js/svelte';
+  // SAME plugin compositions!
+  import { emailPlugins, asyncDataPlugins } from './shared-plugins';
+
+  const [email, setEmail] = useSignal('', emailPlugins);
+  const [userData, refetchUser] = useAsyncSignal(
+    () => fetch('/api/user').then(r => r.json()),
+    null,
+    asyncDataPlugins
+  );
+</script>
+
+<input
+  value={email()}
+  oninput={(e) => setEmail(e.target.value)}
+  placeholder="Email..."
+/>
+```
+
+#### SolidJS Example
+```tsx
+import { useSignal, useAsyncSignal } from 'resig.js/solid';
+// SAME plugin compositions!
+import { emailPlugins, asyncDataPlugins } from './shared-plugins';
+
+function SolidForm() {
+  const [email, setEmail] = useSignal('', emailPlugins);
+  const [userData, refetchUser] = useAsyncSignal(
+    () => fetch('/api/user').then(r => r.json()),
+    null,
+    asyncDataPlugins
+  );
+
+  return (
+    <input
+      value={email()}
+      onInput={(e) => setEmail(e.currentTarget.value)}
+      placeholder="Email..."
+    />
+  );
+}
+```
+
+**Key Point:** The plugin compositions are **identical** across all frameworks!
+
+### 🔧 **Plugin Interface & Usage Patterns**
+
+#### Plugin Interface
+```typescript
+// All plugins follow this simple interface
+type Plugin<T> = (signal: Signal<T>) => Signal<T>;
+
+// Plugin factory pattern
+const myPlugin = (config: ConfigType) => (signal: Signal<T>) => {
+  // Transform the signal while preserving reactivity
+  return signal.map(value => /* transform value based on config */);
+};
+```
+
+#### Core Plugin Examples
+```typescript
+// Debounce plugin - delays updates
+const debouncePlugin = (delay: number) => (signal: Signal<T>) => {
+  // Implementation details handled by Signal-Σ core
+  return signal.debounce(delay);
+};
+
+// Validation plugin - adds validation logic
+const validatePlugin = <T>(validator: (value: T) => boolean) => (signal: Signal<T>) => {
+  return signal.validate(validator);
+};
+
+// Logger plugin - logs all changes
+const loggerPlugin = (prefix: string) => (signal: Signal<T>) => {
+  return signal.tap(value => console.log(`[${prefix}]:`, value));
+};
+
+// Persist plugin - syncs with localStorage
+const persistPlugin = (key: string) => (signal: Signal<T>) => {
+  return signal.persist(key);
+};
+```
+
+#### Plugin Composition Patterns
+```typescript
+// Simple composition
+const [input, setInput] = useSignal('', debouncePlugin(300));
+
+// Multiple plugins
+const [email, setEmail] = useSignal('', compose(
+  debouncePlugin(300),
+  validatePlugin(email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)),
+  loggerPlugin('EmailField')
+));
+
+// Async operations with plugins
+const [userData, refetchUser] = useAsyncSignal(
+  () => fetch('/api/user').then(r => r.json()),
+  null,
+  compose(
+    retryPlugin(3, 1000),
+    timeoutPlugin(5000),
+    cachePlugin(60000),
+    loggerPlugin('UserData')
+  )
+);
+
+// State machines with plugins
+const [state, send] = useMachine(
+  'idle',
+  (state, action) => /* reducer logic */,
+  loggerPlugin('StateMachine')
+);
+```
+
+#### Custom Plugin Creation
+```typescript
+// Create your own plugins following the same pattern
+const customPlugin = (config: any) => (signal: Signal<T>) => {
+  // Your custom logic here
+  return signal.map(value => {
+    // Transform value based on your needs
+    return processValue(value, config);
+  });
+};
+
+// Use your custom plugin
+const [data, setData] = useSignal(initialValue, customPlugin(config));
+
+// Compose with other plugins
+const [enhanced, setEnhanced] = useSignal(initialValue, compose(
+  customPlugin(config),
   loggerPlugin('Enhanced'),
-  cachePlugin('my-cache', 5000),
-  validatePlugin((value) => value >= 0, (value) => console.warn('Invalid:', value))
-)(mySignal);
+  debouncePlugin(200)
+));
 ```
 
-### Plugin Usage Examples
+### 🎯 **Built-in Plugin Combinations**
 
-```tsx
-// Debounce user input
-function DebouncedInput() {
-  const [input, setInput] = useSignal('');
-  const debouncedInput = applyPlugin(debouncePlugin(300))(input);
+```typescript
+import { commonPlugins } from 'resig.js/plugins';
 
-  return (
-    <div>
-      <input value={input} onChange={(e) => setInput(e.target.value)} />
-      <p>Immediate: {input}</p>
-      <p>Debounced: {debouncedInput}</p>
-    </div>
-  );
-}
+// Form field plugin - validation + debouncing + persistence
+const [email, setEmail] = useSignal('',
+  commonPlugins.formField('email', (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+);
 
-// Cache expensive computations
-function CachedData() {
-  const [data, setData] = useSignal({ expensive: 'computation' });
-  const cachedData = applyPlugin(cachePlugin('data-cache', 60000))(data);
+// API data plugin - fetch + caching + retry + logging
+const [userData, setUserData] = useSignal(null,
+  commonPlugins.apiData(() => fetch('/api/user').then(r => r.json()), 'user-cache')
+);
 
-  return <div>Cached: {JSON.stringify(cachedData)}</div>;
-}
+// Real-time plugin - debouncing + logging for live updates
+const [liveData, setLiveData] = useSignal(0,
+  commonPlugins.realTime('LiveCounter', 100)
+);
 
-// Log signal changes for debugging
-function LoggedSignal() {
-  const [count, setCount] = useSignal(0);
-  const loggedCount = applyPlugin(loggerPlugin('Counter'))(count);
-
-  return (
-    <div>
-      <p>Count: {loggedCount}</p>
-      <button onClick={() => setCount(count + 1)}>Increment</button>
-    </div>
-  );
-}
+// Performance plugin - debounce + cache for expensive operations
+const [expensiveData, setExpensiveData] = useSignal(null,
+  commonPlugins.performance('expensive-cache', 300, 60000)
+);
 ```
 
-### Built-in Plugin Combinations
+### 🏗️ **Framework Adapter Architecture**
 
-```tsx
-import { commonPlugins } from 'resig.js';
+Each framework has a lightweight adapter that integrates plugins with native reactivity:
 
-// Debug plugin - combines logging and validation
-const debugSignal = applyPlugin(
-  commonPlugins.debug('MySignal', (value) => value > 0)
-)(mySignal);
+```typescript
+// Framework adapters implement this interface
+interface FrameworkAdapter<T> {
+  createSignal(initialValue: T): [() => T, (value: T) => void];
+  createComputed<U>(compute: () => U): () => U;
+  createEffect(effect: () => void | (() => void)): void;
+  adaptSignal(signal: Signal<T>): [() => T, (value: T) => void];
+  toSignal(getValue: () => T, setValue: (value: T) => void): Signal<T>;
+}
 
-// Performance plugin - combines debounce and cache
-const performanceSignal = applyPlugin(
-  commonPlugins.performance('perf-cache', 100, 300000)
-)(mySignal);
+// React adapter uses useSyncExternalStore
+// Svelte adapter uses $state/$derived/$effect
+// SolidJS adapter uses createSignal/createMemo/createEffect
+// Vue adapter uses ref/computed/watchEffect
+// Qwik adapter uses useSignal/useTask$/useVisibleTask$
 ```
+
+This architecture ensures:
+- **Plugins are framework-agnostic** - write once, use everywhere
+- **Native performance** - each adapter uses framework-optimal patterns
+- **Composability** - plugins compose cleanly with framework features
+- **Type safety** - full TypeScript support across all frameworks
 
 ### Async Hooks
 
@@ -1274,17 +1698,45 @@ function App() {
 // No providers, no context, no prop drilling!
 ```
 
-## 🎮 **Live Demo**
+## 🎮 **Live Demos**
 
-Check out the comprehensive demo at:
-
+### React Demo
 ```bash
 cd examples/react-app
 npm install
 npm run dev
+# Visit http://localhost:3000
 ```
 
-Visit `http://localhost:3000` to see all features in action:
+### Svelte 5 Todo Demo
+```bash
+cd examples/svelte-app
+npm install
+npm run dev
+# Visit http://localhost:3001
+```
+
+### All Framework Examples
+```bash
+# React
+cd examples/react-app && npm run dev
+
+# SolidJS
+cd examples/solid-app && npm run dev
+
+# Svelte 5
+cd examples/svelte-app && npm run dev
+
+# Vue.js
+cd examples/vue-app && npm run dev
+
+# Qwik
+cd examples/qwik-app && npm run dev
+```
+
+## 🌟 **Features Demonstrated**
+
+All demos showcase the same features working across frameworks:
 
 - ✅ **Basic Signals** - useState replacement with automatic reactivity
 - ✅ **Computed Signals** - useMemo/useCallback replacement without dependency arrays

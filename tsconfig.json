@@ -42,6 +42,14 @@
     "typeRoots": ["node_modules/@types", "src/types"]
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules/**", "src/react/**", "examples/**"],
+  "exclude": [
+    "node_modules/**",
+    "src/react/**",
+    "src/solid/**",
+    "src/svelte/**",
+    "src/vue/**",
+    "src/qwik/**",
+    "examples/**"
+  ],
   "compileOnSave": false
 }

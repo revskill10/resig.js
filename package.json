@@ -16,25 +16,55 @@
       "require": "./build/main/react/hooks.js",
       "types": "./build/main/react/hooks.d.ts"
     },
+    "./react/adapter": {
+      "import": "./build/module/react/adapter.js",
+      "require": "./build/main/react/adapter.js",
+      "types": "./build/main/react/adapter.d.ts"
+    },
     "./solid": {
       "import": "./build/module/solid/hooks.js",
       "require": "./build/main/solid/hooks.js",
       "types": "./build/main/solid/hooks.d.ts"
+    },
+    "./solid/adapter": {
+      "import": "./build/module/solid/adapter.js",
+      "require": "./build/main/solid/adapter.js",
+      "types": "./build/main/solid/adapter.d.ts"
     },
     "./svelte": {
       "import": "./build/module/svelte/hooks.js",
       "require": "./build/main/svelte/hooks.js",
       "types": "./build/main/svelte/hooks.d.ts"
     },
+    "./svelte/adapter": {
+      "import": "./build/module/svelte/adapter.js",
+      "require": "./build/main/svelte/adapter.js",
+      "types": "./build/main/svelte/adapter.d.ts"
+    },
     "./vue": {
       "import": "./build/module/vue/hooks.js",
       "require": "./build/main/vue/hooks.js",
       "types": "./build/main/vue/hooks.d.ts"
     },
+    "./vue/adapter": {
+      "import": "./build/module/vue/adapter.js",
+      "require": "./build/main/vue/adapter.js",
+      "types": "./build/main/vue/adapter.d.ts"
+    },
     "./qwik": {
       "import": "./build/module/qwik/hooks.js",
       "require": "./build/main/qwik/hooks.js",
       "types": "./build/main/qwik/hooks.d.ts"
+    },
+    "./qwik/adapter": {
+      "import": "./build/module/qwik/adapter.js",
+      "require": "./build/main/qwik/adapter.js",
+      "types": "./build/main/qwik/adapter.d.ts"
+    },
+    "./plugins": {
+      "import": "./build/module/plugins/index.js",
+      "require": "./build/main/plugins/index.js",
+      "types": "./build/main/plugins/index.d.ts"
     }
   },
   "repository": {

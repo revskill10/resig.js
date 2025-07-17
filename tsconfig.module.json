@@ -6,6 +6,12 @@
     "module": "esnext"
   },
   "exclude": [
-    "node_modules/**"
+    "node_modules/**",
+    "src/react/**",
+    "src/solid/**",
+    "src/svelte/**",
+    "src/vue/**",
+    "src/qwik/**",
+    "examples/**"
   ]
 }

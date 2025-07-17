@@ -196,6 +196,168 @@ export const switchPlugin =
   };
 
 /**
+ * Async plugin - handles async operations with loading states
+ */
+export const asyncPlugin = <A, B>(
+  asyncFn: (value: A) => Promise<B>,
+  initialValue?: B
+): Plugin<A> => (signal: Signal<A>) => {
+  const asyncSignal = signal.map(() => ({
+    data: initialValue,
+    loading: false,
+    error: undefined as Error | undefined
+  }));
+
+  signal.subscribe(async (value) => {
+    // Set loading state
+    (asyncSignal as any)._set({
+      data: (asyncSignal as any).value().data,
+      loading: true,
+      error: undefined
+    });
+
+    try {
+      const result = await asyncFn(value);
+      (asyncSignal as any)._set({
+        data: result,
+        loading: false,
+        error: undefined
+      });
+    } catch (error) {
+      (asyncSignal as any)._set({
+        data: (asyncSignal as any).value().data,
+        loading: false,
+        error: error instanceof Error ? error : new Error(String(error))
+      });
+    }
+  });
+
+  return asyncSignal as any;
+};
+
+/**
+ * Validation plugin with real-time feedback
+ */
+export const validationPlugin = <A>(
+  validator: (value: A) => boolean,
+  onValidChange?: (isValid: boolean) => void
+): Plugin<A> => (signal: Signal<A>) => {
+  const validatedSignal = signal.map((value) => ({
+    value,
+    isValid: validator(value)
+  }));
+
+  if (onValidChange) {
+    validatedSignal.subscribe(({ isValid }) => onValidChange(isValid));
+  }
+
+  return validatedSignal as any;
+};
+
+/**
+ * State machine plugin
+ */
+export const stateMachinePlugin = <S, A>(
+  initialState: S,
+  reducer: (state: S, action: A) => S
+): Plugin<A> => (actionSignal: Signal<A>) => {
+  let currentState = initialState;
+  const stateSignal = actionSignal.map(() => currentState);
+
+  actionSignal.subscribe((action) => {
+    currentState = reducer(currentState, action);
+    (stateSignal as any)._set(currentState);
+  });
+
+  return stateSignal as any;
+};
+
+/**
+ * Fetch plugin - HTTP operations with retry and caching
+ */
+export const fetchPlugin = <T>(
+  fetcher: () => Promise<T>,
+  options: {
+    retries?: number;
+    cacheKey?: string;
+    cacheTtl?: number;
+  } = {}
+): Plugin<any> => (triggerSignal: Signal<any>) => {
+  const { retries = 0, cacheKey, cacheTtl = 300000 } = options;
+
+  const fetchSignal = triggerSignal.map(() => ({
+    data: undefined as T | undefined,
+    loading: false,
+    error: undefined as Error | undefined
+  }));
+
+  const performFetch = async (attempt = 0): Promise<void> => {
+    // Check cache first
+    if (cacheKey) {
+      try {
+        const cached = localStorage.getItem(`fetch_cache_${cacheKey}`);
+        const cacheTime = localStorage.getItem(`fetch_cache_time_${cacheKey}`);
+
+        if (cached && cacheTime) {
+          const age = Date.now() - parseInt(cacheTime);
+          if (age < cacheTtl) {
+            (fetchSignal as any)._set({
+              data: JSON.parse(cached),
+              loading: false,
+              error: undefined
+            });
+            return;
+          }
+        }
+      } catch (e) {
+        // Cache read failed, proceed with fetch
+      }
+    }
+
+    (fetchSignal as any)._set({
+      data: (fetchSignal as any).value().data,
+      loading: true,
+      error: undefined
+    });
+
+    try {
+      const result = await fetcher();
+
+      // Cache the result
+      if (cacheKey) {
+        try {
+          localStorage.setItem(`fetch_cache_${cacheKey}`, JSON.stringify(result));
+          localStorage.setItem(`fetch_cache_time_${cacheKey}`, Date.now().toString());
+        } catch (e) {
+          // Cache write failed, continue without caching
+        }
+      }
+
+      (fetchSignal as any)._set({
+        data: result,
+        loading: false,
+        error: undefined
+      });
+    } catch (error) {
+      if (attempt < retries) {
+        // Retry after delay
+        setTimeout(() => performFetch(attempt + 1), 1000 * Math.pow(2, attempt));
+      } else {
+        (fetchSignal as any)._set({
+          data: (fetchSignal as any).value().data,
+          loading: false,
+          error: error instanceof Error ? error : new Error(String(error))
+        });
+      }
+    }
+  };
+
+  triggerSignal.subscribe(() => performFetch());
+
+  return fetchSignal as any;
+};
+
+/**
  * Built-in plugin combinations
  */
 export const commonPlugins = {
@@ -232,5 +394,41 @@ export const commonPlugins = {
     compose(
       persistPlugin(key),
       validator ? validatePlugin(validator) : (s) => s,
+    ),
+
+  /**
+   * Form field plugin - combines validation, debouncing, and persistence
+   */
+  formField: <A>(
+    key: string,
+    validator: (value: A) => boolean,
+    debounceMs: number = 300
+  ): Plugin<A> =>
+    compose(
+      debouncePlugin(debounceMs),
+      validationPlugin(validator),
+      persistPlugin(key)
+    ),
+
+  /**
+   * API data plugin - combines fetch, caching, and error handling
+   */
+  apiData: <T>(
+    fetcher: () => Promise<T>,
+    cacheKey: string,
+    retries: number = 3
+  ): Plugin<any> =>
+    compose(
+      fetchPlugin(fetcher, { retries, cacheKey }),
+      loggerPlugin(`API[${cacheKey}]`)
+    ),
+
+  /**
+   * Real-time data plugin - combines debouncing and logging for live updates
+   */
+  realTime: <A>(name: string, debounceMs: number = 100): Plugin<A> =>
+    compose(
+      debouncePlugin(debounceMs),
+      loggerPlugin(`RealTime[${name}]`)
     ),
 };
