@@ -15,41 +15,44 @@ export interface State<S, A> extends Effect<A> {
  * Creates a State effect with state management operations
  */
 export const state = <S, A>(
-  initialState: S, 
-  initialValue: A
+  initialState: S,
+  initialValue: A,
 ): State<S, A> & { _setState: (s: S) => void; _setValue: (a: A) => void } => {
   let currentState = initialState;
   const baseEffect = effect(initialValue);
-  
-  const stateInstance: State<S, A> & { _setState: (s: S) => void; _setValue: (a: A) => void } = {
+
+  const stateInstance: State<S, A> & {
+    _setState: (s: S) => void;
+    _setValue: (a: A) => void;
+  } = {
     value: baseEffect.value,
     map: baseEffect.map,
     subscribe: baseEffect.subscribe,
     bind: baseEffect.bind,
     chain: baseEffect.chain,
-    
+
     get: (): State<S, S> => {
       return state(currentState, currentState);
     },
-    
+
     put: (newState: S): State<S, void> => {
       const putState = state(newState, undefined as void);
       currentState = newState;
       return putState;
     },
-    
+
     modify: (f: (s: S) => S): State<S, void> => {
       const newState = f(currentState);
       return stateInstance.put(newState);
     },
-    
+
     _setState: (s: S) => {
       currentState = s;
     },
-    
-    _setValue: baseEffect._set
+
+    _setValue: baseEffect._set,
   };
-  
+
   return stateInstance;
 };
 
@@ -67,20 +70,20 @@ export interface StateMachine<S, A> {
  */
 export const machine = <S, A>(
   initialState: S,
-  reducer: (state: S, action: A) => S
+  reducer: (state: S, action: A) => S,
 ): StateMachine<S, A> => {
   let currentState = initialState;
   const subscribers = new Set<(state: S) => void>();
-  
+
   const notify = () => {
-    subscribers.forEach(fn => fn(currentState));
+    subscribers.forEach((fn) => fn(currentState));
   };
-  
+
   return {
     get state() {
       return currentState;
     },
-    
+
     send: (action: A) => {
       const newState = reducer(currentState, action);
       if (newState !== currentState) {
@@ -88,11 +91,11 @@ export const machine = <S, A>(
         notify();
       }
     },
-    
+
     subscribe: (fn: (state: S) => void) => {
       subscribers.add(fn);
       return () => subscribers.delete(fn);
-    }
+    },
   };
 };
 
@@ -118,28 +121,27 @@ export type Transition<S extends string, A> = {
  */
 export const fsm = <S extends string, A>(
   initialState: S,
-  transitions: Transition<S, A>[]
+  transitions: Transition<S, A>[],
 ): FSM<S, A> => {
   let currentState = initialState;
   const subscribers = new Set<(state: S) => void>();
-  
+
   const notify = () => {
-    subscribers.forEach(fn => fn(currentState));
+    subscribers.forEach((fn) => fn(currentState));
   };
-  
+
   const getTransition = (action: A): Transition<S, A> | undefined => {
-    return transitions.find(t => 
-      t.from === currentState && 
-      t.on === action && 
-      (!t.guard || t.guard())
+    return transitions.find(
+      (t) =>
+        t.from === currentState && t.on === action && (!t.guard || t.guard()),
     );
   };
-  
+
   return {
     get current() {
       return currentState;
     },
-    
+
     send: (action: A) => {
       const transition = getTransition(action);
       if (transition) {
@@ -147,46 +149,53 @@ export const fsm = <S extends string, A>(
         notify();
       }
     },
-    
+
     can: (action: A) => {
       return getTransition(action) !== undefined;
     },
-    
+
     subscribe: (fn: (state: S) => void) => {
       subscribers.add(fn);
       return () => subscribers.delete(fn);
-    }
+    },
   };
 };
 
 /**
  * Natural transformation: State → Signal (lens view)
+ * Simplified implementation that maps over the value
  */
-export const lens = <S, A>(f: (s: S) => A) => (stateEffect: State<S, A>) => {
-  return stateEffect.map(f);
-};
+export const lens =
+  <S, A, B>(f: (a: A) => B) =>
+  (stateEffect: State<S, A>): State<S, B> => {
+    // For now, just cast the result - this is a simplified implementation
+    return stateEffect.map(f) as unknown as State<S, B>;
+  };
 
 /**
  * Combines multiple state machines
  */
 export const combine = <S1, S2, A1, A2>(
   machine1: StateMachine<S1, A1>,
-  machine2: StateMachine<S2, A2>
-): StateMachine<{ m1: S1; m2: S2 }, { type: 'm1'; action: A1 } | { type: 'm2'; action: A2 }> => {
+  machine2: StateMachine<S2, A2>,
+): StateMachine<
+  { m1: S1; m2: S2 },
+  { type: 'm1'; action: A1 } | { type: 'm2'; action: A2 }
+> => {
   const subscribers = new Set<(state: { m1: S1; m2: S2 }) => void>();
-  
+
   const notify = () => {
-    subscribers.forEach(fn => fn({ m1: machine1.state, m2: machine2.state }));
+    subscribers.forEach((fn) => fn({ m1: machine1.state, m2: machine2.state }));
   };
-  
+
   machine1.subscribe(notify);
   machine2.subscribe(notify);
-  
+
   return {
     get state() {
       return { m1: machine1.state, m2: machine2.state };
     },
-    
+
     send: (action) => {
       if (action.type === 'm1') {
         machine1.send(action.action);
@@ -194,10 +203,10 @@ export const combine = <S1, S2, A1, A2>(
         machine2.send(action.action);
       }
     },
-    
+
     subscribe: (fn) => {
       subscribers.add(fn);
       return () => subscribers.delete(fn);
-    }
+    },
   };
 };

@@ -5,31 +5,39 @@
 
 // Mock React for TypeScript compatibility
 const React = {
-  useMemo: <T>(fn: () => T) => fn()
+  useMemo: <T>(fn: () => T, ...args: unknown[]) => {
+    void args;
+    return fn();
+  },
 };
 const useSyncExternalStore = <T>(
-  subscribe: (onStoreChange: () => void) => () => void,
-  getSnapshot: () => T
+  _subscribe: (onStoreChange: () => void) => () => void,
+  getSnapshot: () => T,
 ): T => getSnapshot();
 
-import { Signal, signal } from '../core/signal';
-import { Effect, effect } from '../core/effect';
-import { Time, time } from '../algebras/time';
 import { Fetch, fetch } from '../algebras/fetch';
-import { State, state, StateMachine, machine } from '../algebras/state';
+import { machine, state, State } from '../algebras/state';
+import { Time, time } from '../algebras/time';
+import { Effect, effect } from '../core/effect';
+import { Signal, signal } from '../core/signal';
 
 /**
  * Core hook - replaces useState completely
  * No deps array needed - automatic dependency tracking via useSyncExternalStore
  */
-export function use<A>(initialValue: A): Signal<A> & { set: (value: A) => void } {
+export function use<A>(
+  initialValue: A,
+): Signal<A> & { set: (value: A) => void } {
   // Create signal instance only once using lazy initialization
-  const signalInstance = React.useMemo(() => signal(initialValue), []);
+  const signalInstance = React.useMemo(
+    () => signal(initialValue),
+    [initialValue],
+  );
 
   // Use React's useSyncExternalStore for automatic re-renders
   const value = useSyncExternalStore(
     signalInstance.subscribe,
-    signalInstance.value
+    signalInstance.value,
   );
 
   // Return signal interface with public setter
@@ -37,7 +45,7 @@ export function use<A>(initialValue: A): Signal<A> & { set: (value: A) => void }
     value: () => value,
     map: signalInstance.map,
     subscribe: signalInstance.subscribe,
-    set: (newValue: A) => signalInstance._set(newValue)
+    set: (newValue: A) => signalInstance._set(newValue),
   };
 }
 
@@ -47,12 +55,17 @@ export const useSignal = use;
 /**
  * Effect hook - extends signal with monadic operations
  */
-export function effect$<A>(initialValue: A): Effect<A> & { set: (value: A) => void } {
-  const effectInstance = React.useMemo(() => effect(initialValue), []);
+export function effect$<A>(
+  initialValue: A,
+): Effect<A> & { set: (value: A) => void } {
+  const effectInstance = React.useMemo(
+    () => effect(initialValue),
+    [initialValue],
+  );
 
   const value = useSyncExternalStore(
     effectInstance.subscribe,
-    effectInstance.value
+    effectInstance.value,
   );
 
   return {
@@ -61,19 +74,21 @@ export function effect$<A>(initialValue: A): Effect<A> & { set: (value: A) => vo
     subscribe: effectInstance.subscribe,
     bind: effectInstance.bind,
     chain: effectInstance.chain,
-    set: (newValue: A) => effectInstance._set(newValue)
+    set: (newValue: A) => effectInstance._set(newValue),
   };
 }
 
 /**
  * Time hook - temporal operations
  */
-export function time$<A>(initialValue: A): Time<A> & { set: (value: A) => void } {
-  const timeInstance = React.useMemo(() => time(initialValue), []);
+export function time$<A>(
+  initialValue: A,
+): Time<A> & { set: (value: A) => void } {
+  const timeInstance = React.useMemo(() => time(initialValue), [initialValue]);
 
   const value = useSyncExternalStore(
     timeInstance.subscribe,
-    timeInstance.value
+    timeInstance.value,
   );
 
   return {
@@ -85,7 +100,7 @@ export function time$<A>(initialValue: A): Time<A> & { set: (value: A) => void }
     delay: timeInstance.delay,
     timeout: timeInstance.timeout,
     interval: timeInstance.interval,
-    set: (newValue: A) => timeInstance._set(newValue)
+    set: (newValue: A) => timeInstance._set(newValue),
   };
 }
 
@@ -93,11 +108,11 @@ export function time$<A>(initialValue: A): Time<A> & { set: (value: A) => void }
  * Fetch hook - network operations (React-Query replacement)
  */
 export function fetch$<A>(fetcher: () => Promise<A>): Fetch<A> {
-  const fetchInstance = React.useMemo(() => fetch(fetcher), []);
+  const fetchInstance = React.useMemo(() => fetch(fetcher), [fetcher]);
 
   const value = useSyncExternalStore(
     fetchInstance.subscribe,
-    fetchInstance.value
+    fetchInstance.value,
   );
 
   return {
@@ -108,7 +123,7 @@ export function fetch$<A>(fetcher: () => Promise<A>): Fetch<A> {
     chain: fetchInstance.chain,
     retry: fetchInstance.retry,
     cache: fetchInstance.cache,
-    refetch: fetchInstance.refetch
+    refetch: fetchInstance.refetch,
   };
 }
 
@@ -117,18 +132,18 @@ export function fetch$<A>(fetcher: () => Promise<A>): Fetch<A> {
  * No deps array needed - composition handles dependencies automatically
  */
 export function computed<A>(compute: () => A): Signal<A> {
-  const computedSignal = React.useMemo(() => signal(compute()), []);
+  const computedSignal = React.useMemo(() => signal(compute()), [compute]);
 
   // Use React's useSyncExternalStore for re-renders
   const value = useSyncExternalStore(
     computedSignal.subscribe,
-    computedSignal.value
+    computedSignal.value,
   );
 
   return {
     value: () => value,
     map: computedSignal.map,
-    subscribe: computedSignal.subscribe
+    subscribe: computedSignal.subscribe,
   };
 }
 
@@ -137,13 +152,16 @@ export function computed<A>(compute: () => A): Signal<A> {
  */
 export function machine$<S, A>(
   initialState: S,
-  reducer: (state: S, action: A) => S
+  reducer: (state: S, action: A) => S,
 ): [S, (action: A) => void] {
-  const machineInstance = React.useMemo(() => machine(initialState, reducer), []);
+  const machineInstance = React.useMemo(
+    () => machine(initialState, reducer),
+    [initialState, reducer],
+  );
 
   const state = useSyncExternalStore(
     machineInstance.subscribe,
-    () => machineInstance.state
+    () => machineInstance.state,
   );
 
   return [state, machineInstance.send];
@@ -154,13 +172,16 @@ export function machine$<S, A>(
  */
 export function state$<S, A>(
   initialState: S,
-  initialValue: A
+  initialValue: A,
 ): State<S, A> & { setState: (s: S) => void } {
-  const stateInstance = React.useMemo(() => state(initialState, initialValue), []);
+  const stateInstance = React.useMemo(
+    () => state(initialState, initialValue),
+    [initialState, initialValue],
+  );
 
   const value = useSyncExternalStore(
     stateInstance.subscribe,
-    stateInstance.value
+    stateInstance.value,
   );
 
   return {
@@ -172,6 +193,6 @@ export function state$<S, A>(
     get: stateInstance.get,
     put: stateInstance.put,
     modify: stateInstance.modify,
-    setState: (s: S) => stateInstance._setState(s)
+    setState: (s: S) => stateInstance._setState(s),
   };
 }

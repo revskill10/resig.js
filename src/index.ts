@@ -25,17 +25,17 @@ export {
   transformPlugin,
   validatePlugin,
   persistPlugin,
-  commonPlugins
+  commonPlugins,
 } from './plugins';
 export { compose as composePlugins, apply as applyPlugin } from './plugins';
 
 // Main API
-import { signal } from './core/signal';
-import { effect } from './core/effect';
-import { time } from './algebras/time';
 import { fetch } from './algebras/fetch';
 import { machine } from './algebras/state';
-import { use, computed, effect$, time$, fetch$, machine$ } from './react/hooks';
+import { time } from './algebras/time';
+import { effect } from './core/effect';
+import { signal } from './core/signal';
+import { computed, effect$, fetch$, machine$, time$, use } from './react/hooks';
 
 /**
  * Main Signal-Σ API
@@ -54,5 +54,5 @@ export default {
   effect$,
   time$,
   fetch$,
-  machine$
+  machine$,
 };
