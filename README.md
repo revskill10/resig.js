@@ -29,28 +29,166 @@ Signal-Σ is a **production-ready reactive signal library** that completely repl
 npm install resig.js
 ```
 
-### Basic Usage
+### Universal Framework Support
 
+Signal-Σ works seamlessly across **all major frameworks** with the same API:
+
+#### React
 ```tsx
-import { useSignal, useComputed } from 'resig.js';
+import { useSignal, useComputed } from 'resig.js/react';
 
 function Counter() {
-  // NO useState needed!
   const [count, setCount] = useSignal(0);
-
-  // NO dependency arrays needed!
   const doubled = useComputed(() => count * 2);
-  const isEven = useComputed(() => count % 2 === 0);
 
   return (
     <div>
       <p>Count: {count}</p>
       <p>Doubled: {doubled}</p>
-      <p>Is Even: {isEven ? 'Yes' : 'No'}</p>
       <button onClick={() => setCount(count + 1)}>+</button>
     </div>
   );
 }
+```
+
+#### SolidJS
+```tsx
+import { useSignal, useComputed } from 'resig.js/solid';
+
+function Counter() {
+  const [count, setCount] = useSignal(0);
+  const doubled = useComputed(() => count() * 2);
+
+  return (
+    <div>
+      <p>Count: {count()}</p>
+      <p>Doubled: {doubled()}</p>
+      <button onClick={() => setCount(count() + 1)}>+</button>
+    </div>
+  );
+}
+```
+
+#### Svelte 5 (Runes)
+```svelte
+<script>
+  import { useSignal, useComputed } from 'resig.js/svelte';
+
+  const [count, setCount] = useSignal(0);
+  const doubled = useComputed(() => count() * 2);
+</script>
+
+<div>
+  <p>Count: {count()}</p>
+  <p>Doubled: {doubled()}</p>
+  <button onclick={() => setCount(count() + 1)}>+</button>
+</div>
+```
+
+#### Vue.js
+```vue
+<template>
+  <div>
+    <p>Count: {{ count() }}</p>
+    <p>Doubled: {{ doubled() }}</p>
+    <button @click="setCount(count() + 1)">+</button>
+  </div>
+</template>
+
+<script setup>
+import { useSignal, useComputed } from 'resig.js/vue';
+
+const [count, setCount] = useSignal(0);
+const doubled = useComputed(() => count() * 2);
+</script>
+```
+
+#### Qwik
+```tsx
+import { component$ } from '@builder.io/qwik';
+import { useSignal, useComputed } from 'resig.js/qwik';
+
+export default component$(() => {
+  const [count, setCount] = useSignal(0);
+  const doubled = useComputed(() => count() * 2);
+
+  return (
+    <div>
+      <p>Count: {count()}</p>
+      <p>Doubled: {doubled()}</p>
+      <button onClick$={() => setCount(count() + 1)}>+</button>
+    </div>
+  );
+});
+```
+
+### 🌟 **Same API, Every Framework**
+
+The beauty of Signal-Σ is that **the same reactive logic works everywhere**. Learn once, use everywhere!
+
+## 🌐 **Framework Adapters**
+
+Signal-Σ showcases the power of its core abstraction by providing native adapters for all major frameworks:
+
+| Framework | Import Path | Native Integration |
+|-----------|-------------|-------------------|
+| **React** | `resig.js/react` | useState, useEffect, useMemo |
+| **SolidJS** | `resig.js/solid` | createSignal, createMemo, createEffect |
+| **Svelte 5** | `resig.js/svelte` | $state, $derived, $effect |
+| **Vue.js** | `resig.js/vue` | ref, computed, watchEffect |
+| **Qwik** | `resig.js/qwik` | useSignal, useTask$, useVisibleTask$ |
+
+### Framework-Specific Features
+
+Each adapter leverages the framework's native reactivity system:
+
+#### React Adapter
+- Uses React's reconciliation and batching
+- Integrates with React DevTools
+- Supports Suspense and Concurrent Features
+
+#### SolidJS Adapter
+- Leverages SolidJS's fine-grained reactivity
+- Zero virtual DOM overhead
+- Automatic cleanup with onCleanup
+
+#### Svelte 5 Adapter
+- Uses Svelte 5's new runes system
+- Compile-time optimizations
+- Automatic cleanup and lifecycle management
+
+#### Vue.js Adapter
+- Integrates with Vue's reactivity system
+- Works with Vue DevTools
+- Supports composition API patterns
+
+#### Qwik Adapter
+- Resumable execution model
+- Server-side rendering optimization
+- Progressive hydration support
+
+### Cross-Framework State Sharing
+
+The core Signal-Σ abstraction enables **cross-framework state sharing**:
+
+```typescript
+// Shared state (framework-agnostic)
+import { signal } from 'resig.js';
+
+export const globalCounter = signal(0);
+export const globalTheme = signal('light');
+
+// Use in React
+import { useSignal } from 'resig.js/react';
+const [count, setCount] = useSignal(globalCounter.value());
+
+// Use in SolidJS
+import { useSignal } from 'resig.js/solid';
+const [count, setCount] = useSignal(globalCounter.value());
+
+// Use in Vue
+import { useSignal } from 'resig.js/vue';
+const [count, setCount] = useSignal(globalCounter.value());
 ```
 
 ## 📚 **Complete API Reference**
@@ -1387,6 +1525,12 @@ MIT License - see [LICENSE](LICENSE) file for details.
 npm install resig.js
 ```
 
-**Signal-Σ: Reliable reactive programming for modern React development** 🔧⚛️
+**Signal-Σ: Universal reactive programming for the entire JavaScript ecosystem** 🌐⚛️
 
-*Built for reliability. Powered by simplicity. Designed for developers.*
+*Built for reliability. Powered by simplicity. Designed for every framework.*
+
+### 🌟 **The Universal Signal Library**
+
+Signal-Σ proves that **great abstractions transcend frameworks**. The same reactive logic that powers your React app can seamlessly run in SolidJS, Svelte 5, Vue.js, and Qwik with zero changes to your business logic.
+
+**Learn once. Use everywhere. Build the future.**
