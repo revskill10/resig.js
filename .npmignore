@@ -1,0 +1,50 @@
+# Source files
+src/
+examples/
+
+# Development files
+.github/
+.vscode/
+.idea/
+*.log
+*.tgz
+
+# Test files
+test/
+coverage/
+.nyc_output/
+**/*.spec.ts
+**/*.test.ts
+
+# Build artifacts
+.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# Development dependencies
+node_modules/
+
+# Git
+.git/
+.gitignore
+
+# Documentation source
+docs/
+
+# Configuration files
+.eslintrc*
+.prettierrc*
+tsconfig*.json
+ava.config.*
+nyc.config.*
+
+# CI/CD
+.travis.yml
+.circleci/
+.github/
+
+# Misc
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
