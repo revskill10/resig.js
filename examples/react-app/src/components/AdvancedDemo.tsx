@@ -4,7 +4,7 @@ import {
   useDebouncedSignal,
   useValidatedSignal,
   usePersistentSignal
-} from '../hooks';
+} from '../../../../src/react/hooks';
 
 function AdvancedDemo() {
   // Debounced signal for search

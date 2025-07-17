@@ -1,4 +1,4 @@
-import { useSignal, useComputed, useDebouncedSignal } from '../hooks';
+import { useSignal, useComputed, useDebouncedSignal } from '../../../../src/react/hooks';
 
 function PluginDemo() {
   const [input, setInput] = useSignal('');

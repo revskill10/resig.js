@@ -1,4 +1,4 @@
-import { useFetch, useSignal, useComputed } from '../hooks';
+import { useFetch, useSignal, useComputed } from '../../../../src/react/hooks';
 
 // Mock API functions
 const mockApi = {

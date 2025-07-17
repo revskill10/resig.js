@@ -1,5 +1,5 @@
-import { useSignal, useComputed } from '../hooks';
-import { signal } from '../signal';
+import { useSignal, useComputed } from '../../../../src/react/hooks';
+import { signal } from '../../../../src/core/signal';
 import { useSyncExternalStore, useRef } from 'react';
 
 // Excel-like grid with automatic formula calculation

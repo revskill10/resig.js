@@ -1,4 +1,4 @@
-import { useSignal, useComputed } from '../hooks';
+import { useSignal, useComputed } from '../../../../src/react/hooks';
 
 function ComputedSignalDemo() {
   // NO useState! Using Signal-Σ instead

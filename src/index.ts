@@ -35,7 +35,23 @@ import { machine } from './algebras/state';
 import { time } from './algebras/time';
 import { effect } from './core/effect';
 import { signal } from './core/signal';
-import { computed, effect$, fetch$, machine$, time$, use } from './react/hooks';
+import {
+  computed,
+  effect$,
+  fetch$,
+  machine$,
+  time$,
+  use,
+  useComputed,
+  useDebouncedSignal,
+  useDerived,
+  useEffect,
+  useFetch,
+  useMachine,
+  usePersistentSignal,
+  useSignal,
+  useValidatedSignal,
+} from './react/hooks';
 
 /**
  * Main Signal-Σ API
@@ -55,4 +71,15 @@ export default {
   time$,
   fetch$,
   machine$,
+
+  // Additional React hooks
+  useSignal,
+  useComputed,
+  useEffect,
+  useMachine,
+  useFetch,
+  useDerived,
+  useValidatedSignal,
+  useDebouncedSignal,
+  usePersistentSignal,
 };

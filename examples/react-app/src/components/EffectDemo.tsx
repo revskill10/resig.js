@@ -1,4 +1,4 @@
-import { useEffect, useSignal, useComputed } from '../hooks';
+import { useEffect, useSignal, useComputed } from '../../../../src/react/hooks';
 
 function EffectDemo() {
   // Basic effect - extends signal with monadic operations

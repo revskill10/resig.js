@@ -1,4 +1,4 @@
-import { useSignal, useComputed } from '../hooks';
+import { useSignal, useComputed } from '../../../../src/react/hooks';
 
 function UseEffectReplacementDemo() {
   // NO useEffect needed! Signal-Σ handles side effects automatically

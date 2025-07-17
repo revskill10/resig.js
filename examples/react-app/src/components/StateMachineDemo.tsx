@@ -1,4 +1,4 @@
-import { useMachine, useSignal } from '../hooks';
+import { useMachine, useSignal } from '../../../../src/react/hooks';
 
 type State = 'idle' | 'loading' | 'success' | 'error';
 type Action = 'start' | 'success' | 'error' | 'reset';

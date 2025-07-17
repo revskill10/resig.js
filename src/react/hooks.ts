@@ -1,198 +1,223 @@
 /**
- * React Hooks Integration - Compositional hooks without deps arrays
- * Following the DESIGN.md: No deps array, ever.
+ * React Hooks for Signal-Σ - NO dependency arrays needed!
+ * All hooks use useSyncExternalStore for automatic re-renders
  */
 
-// Mock React for TypeScript compatibility
-const React = {
-  useMemo: <T>(fn: () => T, ...args: unknown[]) => {
-    void args;
-    return fn();
-  },
-};
-const useSyncExternalStore = <T>(
-  _subscribe: (onStoreChange: () => void) => () => void,
-  getSnapshot: () => T,
-): T => getSnapshot();
+import { useRef, useSyncExternalStore } from 'react';
 
 import { Fetch, fetch } from '../algebras/fetch';
-import { machine, state, State } from '../algebras/state';
-import { Time, time } from '../algebras/time';
+import { machine, StateMachine } from '../algebras/state';
+import { time } from '../algebras/time';
 import { Effect, effect } from '../core/effect';
 import { Signal, signal } from '../core/signal';
 
-/**
- * Core hook - replaces useState completely
- * No deps array needed - automatic dependency tracking via useSyncExternalStore
- */
-export function use<A>(
-  initialValue: A,
-): Signal<A> & { set: (value: A) => void } {
-  // Create signal instance only once using lazy initialization
-  const signalInstance = React.useMemo(
-    () => signal(initialValue),
-    [initialValue],
-  );
-
-  // Use React's useSyncExternalStore for automatic re-renders
-  const value = useSyncExternalStore(
-    signalInstance.subscribe,
-    signalInstance.value,
-  );
-
-  // Return signal interface with public setter
-  return {
-    value: () => value,
-    map: signalInstance.map,
-    subscribe: signalInstance.subscribe,
-    set: (newValue: A) => signalInstance._set(newValue),
-  };
-}
-
-// Alias for convenience
-export const useSignal = use;
-
-/**
- * Effect hook - extends signal with monadic operations
- */
-export function effect$<A>(
-  initialValue: A,
-): Effect<A> & { set: (value: A) => void } {
-  const effectInstance = React.useMemo(
-    () => effect(initialValue),
-    [initialValue],
-  );
+// Hook for basic signals - replaces useState completely
+export function useSignal<T>(initialValue: T): [T, (value: T) => void] {
+  const sigRef = useRef<Signal<T> & { _set: (value: T) => void }>();
+  if (!sigRef.current) {
+    sigRef.current = signal(initialValue);
+  }
 
   const value = useSyncExternalStore(
-    effectInstance.subscribe,
-    effectInstance.value,
+    sigRef.current.subscribe,
+    sigRef.current.value,
   );
-
-  return {
-    value: () => value,
-    map: effectInstance.map,
-    subscribe: effectInstance.subscribe,
-    bind: effectInstance.bind,
-    chain: effectInstance.chain,
-    set: (newValue: A) => effectInstance._set(newValue),
-  };
+  return [value, sigRef.current._set];
 }
 
-/**
- * Time hook - temporal operations
- */
-export function time$<A>(
-  initialValue: A,
-): Time<A> & { set: (value: A) => void } {
-  const timeInstance = React.useMemo(() => time(initialValue), [initialValue]);
+// Hook for computed signals - NO dependency arrays!
+// React's re-rendering handles the reactivity automatically
+export function useComputed<T>(compute: () => T): T {
+  return compute();
+}
+
+// Hook for effects - monadic composition
+export function useEffect<T>(
+  initialValue: T,
+): [T, (value: T) => void, Effect<T>] {
+  const effRef = useRef<Effect<T> & { _set: (value: T) => void }>();
+  if (!effRef.current) {
+    effRef.current = effect(initialValue);
+  }
 
   const value = useSyncExternalStore(
-    timeInstance.subscribe,
-    timeInstance.value,
+    effRef.current.subscribe,
+    effRef.current.value,
   );
-
-  return {
-    value: () => value,
-    map: timeInstance.map,
-    subscribe: timeInstance.subscribe,
-    bind: timeInstance.bind,
-    chain: timeInstance.chain,
-    delay: timeInstance.delay,
-    timeout: timeInstance.timeout,
-    interval: timeInstance.interval,
-    set: (newValue: A) => timeInstance._set(newValue),
-  };
+  return [value, effRef.current._set, effRef.current];
 }
 
-/**
- * Fetch hook - network operations (React-Query replacement)
- */
-export function fetch$<A>(fetcher: () => Promise<A>): Fetch<A> {
-  const fetchInstance = React.useMemo(() => fetch(fetcher), [fetcher]);
-
-  const value = useSyncExternalStore(
-    fetchInstance.subscribe,
-    fetchInstance.value,
-  );
-
-  return {
-    value: () => value,
-    map: fetchInstance.map,
-    subscribe: fetchInstance.subscribe,
-    bind: fetchInstance.bind,
-    chain: fetchInstance.chain,
-    retry: fetchInstance.retry,
-    cache: fetchInstance.cache,
-    refetch: fetchInstance.refetch,
-  };
-}
-
-/**
- * Computed signal - pure function composition
- * No deps array needed - composition handles dependencies automatically
- */
-export function computed<A>(compute: () => A): Signal<A> {
-  const computedSignal = React.useMemo(() => signal(compute()), [compute]);
-
-  // Use React's useSyncExternalStore for re-renders
-  const value = useSyncExternalStore(
-    computedSignal.subscribe,
-    computedSignal.value,
-  );
-
-  return {
-    value: () => value,
-    map: computedSignal.map,
-    subscribe: computedSignal.subscribe,
-  };
-}
-
-/**
- * State machine hook
- */
-export function machine$<S, A>(
+// Hook for state machines - replaces complex useState patterns
+export function useMachine<S, A>(
   initialState: S,
   reducer: (state: S, action: A) => S,
 ): [S, (action: A) => void] {
-  const machineInstance = React.useMemo(
-    () => machine(initialState, reducer),
-    [initialState, reducer],
-  );
+  const machineRef = useRef<StateMachine<S, A>>();
+  if (!machineRef.current) {
+    machineRef.current = machine(initialState, reducer);
+  }
 
   const state = useSyncExternalStore(
-    machineInstance.subscribe,
-    () => machineInstance.state,
+    machineRef.current.subscribe,
+    () => machineRef.current!.state,
   );
-
-  return [state, machineInstance.send];
+  return [state, machineRef.current.send];
 }
 
-/**
- * State hook with algebraic operations
- */
-export function state$<S, A>(
-  initialState: S,
-  initialValue: A,
-): State<S, A> & { setState: (s: S) => void } {
-  const stateInstance = React.useMemo(
-    () => state(initialState, initialValue),
-    [initialState, initialValue],
+// Hook for async data fetching - replaces React Query
+export function useFetch<T>(
+  fetcher: () => Promise<T>,
+): [
+  { data?: T; loading: boolean; error?: Error },
+  () => Fetch<T>,
+  (n: number) => Fetch<T>,
+] {
+  const fetchRef = useRef<
+    Fetch<T> & {
+      _set: (value: { data?: T; loading: boolean; error?: Error }) => void;
+    }
+  >();
+  if (!fetchRef.current) {
+    fetchRef.current = fetch(fetcher);
+  }
+
+  const state = useSyncExternalStore(
+    fetchRef.current.subscribe,
+    fetchRef.current.value,
   );
+
+  return [
+    state,
+    () => fetchRef.current!.refetch(),
+    (n: number) => fetchRef.current!.retry(n),
+  ];
+}
+
+// Hook for derived/computed values from multiple signals
+// React's re-rendering handles the reactivity automatically
+export function useDerived<T>(derive: () => T): T {
+  return derive();
+}
+
+// Hook for signal with validation
+export function useValidatedSignal<T>(
+  initialValue: T,
+  validator: (value: T) => boolean,
+  onError?: (value: T) => void,
+): [T, (value: T) => void, boolean] {
+  const sigRef = useRef<Signal<T> & { _set: (value: T) => void }>();
+  const isValidRef = useRef<
+    Signal<boolean> & { _set: (value: boolean) => void }
+  >();
+
+  if (!sigRef.current) {
+    sigRef.current = signal(initialValue);
+  }
+  if (!isValidRef.current) {
+    isValidRef.current = signal(validator(initialValue));
+  }
+
+  const setValue = (value: T) => {
+    const valid = validator(value);
+    if (valid) {
+      sigRef.current!._set(value);
+      isValidRef.current!._set(true);
+    } else {
+      isValidRef.current!._set(false);
+      onError?.(value);
+    }
+  };
 
   const value = useSyncExternalStore(
-    stateInstance.subscribe,
-    stateInstance.value,
+    sigRef.current.subscribe,
+    sigRef.current.value,
+  );
+  const valid = useSyncExternalStore(
+    isValidRef.current.subscribe,
+    isValidRef.current.value,
   );
 
-  return {
-    value: () => value,
-    map: stateInstance.map,
-    subscribe: stateInstance.subscribe,
-    bind: stateInstance.bind,
-    chain: stateInstance.chain,
-    get: stateInstance.get,
-    put: stateInstance.put,
-    modify: stateInstance.modify,
-    setState: (s: S) => stateInstance._setState(s),
-  };
+  return [value, setValue, valid];
 }
+
+// Hook for debounced signals
+export function useDebouncedSignal<T>(
+  initialValue: T,
+  delay: number,
+): [T, (value: T) => void, T] {
+  const immediateRef = useRef<Signal<T> & { _set: (value: T) => void }>();
+  const debouncedRef = useRef<Signal<T> & { _set: (value: T) => void }>();
+  const timeoutRef = useRef<NodeJS.Timeout>();
+
+  if (!immediateRef.current) {
+    immediateRef.current = signal(initialValue);
+  }
+  if (!debouncedRef.current) {
+    debouncedRef.current = signal(initialValue);
+  }
+
+  const setValue = (value: T) => {
+    immediateRef.current!._set(value);
+    clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      debouncedRef.current!._set(value);
+    }, delay);
+  };
+
+  const immediateValue = useSyncExternalStore(
+    immediateRef.current.subscribe,
+    immediateRef.current.value,
+  );
+  const debouncedValue = useSyncExternalStore(
+    debouncedRef.current.subscribe,
+    debouncedRef.current.value,
+  );
+
+  return [immediateValue, setValue, debouncedValue];
+}
+
+// Hook for persistent signals (localStorage)
+export function usePersistentSignal<T>(
+  key: string,
+  initialValue: T,
+): [T, (value: T) => void] {
+  const sigRef = useRef<Signal<T> & { _set: (value: T) => void }>();
+
+  if (!sigRef.current) {
+    // Try to load from localStorage
+    let storedValue = initialValue;
+    try {
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        storedValue = JSON.parse(stored);
+      }
+    } catch (e) {
+      // Use initial value if parsing fails
+    }
+
+    sigRef.current = signal(storedValue);
+
+    // Subscribe to changes and persist them
+    sigRef.current.subscribe(() => {
+      try {
+        localStorage.setItem(key, JSON.stringify(sigRef.current!.value()));
+      } catch (e) {
+        // Ignore storage errors
+      }
+    });
+  }
+
+  const value = useSyncExternalStore(
+    sigRef.current.subscribe,
+    sigRef.current.value,
+  );
+  return [value, sigRef.current._set];
+}
+
+// Legacy aliases for backward compatibility
+export const use = useSignal;
+export const computed = useComputed;
+export const effect$ = useEffect;
+export const time$ = <T>(initialValue: T) => time(initialValue);
+export const fetch$ = useFetch;
+export const machine$ = useMachine;
