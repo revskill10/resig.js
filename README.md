@@ -8,14 +8,14 @@
 
 ## 🎯 **What is Signal-Σ?**
 
-Signal-Σ is a **production-ready reactive signal library** that completely replaces React hooks with automatic dependency tracking. Built on category theory and algebraic principles, it provides predictable, composable reactive programming for React applications.
+Signal-Σ is a **production-ready reactive signal library** that completely replaces React hooks with automatic dependency tracking. It provides predictable, composable reactive programming for React applications.
 
 ### ✨ **Key Features**
 
 - **🚫 NO useState, NO useEffect, NO dependency arrays!**
-- **🔧 Reliable architecture** - Built on category theory for predictable behavior
+- **🔧 Reliable architecture** - Predictable behavior with proven patterns
 - **⚡ Automatic dependency tracking** - Changes propagate automatically
-- **🔌 Zero-runtime cost plugins** - Composable cross-cutting concerns
+- **🔌 Zero-runtime cost plugins** - Composable features and utilities
 - **🤖 State machines** - XState replacement with type-safe transitions
 - **🌐 Network operations** - React-Query replacement with automatic refetching
 - **⏰ Time-based features** - Debouncing, throttling, intervals without useEffect
@@ -307,7 +307,7 @@ function AsyncButton() {
 
 #### `useEffect<T>(initialValue: T): [T, (value: T) => void, Effect<T>]`
 
-**Purpose:** Monadic effect composition for advanced functional programming patterns
+**Purpose:** Advanced effect composition for complex side effect patterns
 
 ```tsx
 import { useEffect, useSignal } from 'resig.js';
@@ -316,7 +316,7 @@ function EffectExample() {
   const [count, setCount] = useSignal(0);
   const [effectValue, setEffectValue, effectMonad] = useEffect('initial');
 
-  // Chain effects using monadic composition
+  // Chain effects together
   const handleEffectDemo = () => {
     const newValue = `Step 1: Effect -> count(${count}) -> processed`;
     setEffectValue(newValue);
@@ -535,7 +535,7 @@ function FormValidation() {
 
 ## 🔌 **Plugin System**
 
-Zero-runtime cost plugins for cross-cutting concerns. Plugins are category functors that compose cleanly.
+Zero-runtime cost plugins for adding features and utilities. Plugins compose cleanly together.
 
 ### Core Plugins
 
@@ -567,10 +567,10 @@ const enhancedSignal = composePlugins(
 )(mySignal);
 ```
 
-### Plugin Examples
+### Plugin Usage Examples
 
-#### Debounce Plugin
 ```tsx
+// Debounce user input
 function DebouncedInput() {
   const [input, setInput] = useSignal('');
   const debouncedInput = applyPlugin(debouncePlugin(300))(input);
@@ -583,20 +583,16 @@ function DebouncedInput() {
     </div>
   );
 }
-```
 
-#### Cache Plugin
-```tsx
+// Cache expensive computations
 function CachedData() {
   const [data, setData] = useSignal({ expensive: 'computation' });
   const cachedData = applyPlugin(cachePlugin('data-cache', 60000))(data);
 
   return <div>Cached: {JSON.stringify(cachedData)}</div>;
 }
-```
 
-#### Logger Plugin
-```tsx
+// Log signal changes for debugging
 function LoggedSignal() {
   const [count, setCount] = useSignal(0);
   const loggedCount = applyPlugin(loggerPlugin('Counter'))(count);
@@ -705,11 +701,11 @@ function Dashboard() {
 }
 ```
 
-## 🏗️ **Core Algebra APIs**
+## 🏗️ **Advanced APIs**
 
-For advanced users who want to work with the underlying algebraic structures.
+For advanced users who want to work with the underlying core functions.
 
-### Signal Core
+### Core Signal Functions
 
 ```tsx
 import { signal, effect, time, fetch, machine } from 'resig.js';
@@ -719,7 +715,7 @@ const mySignal = signal(42);
 const value = mySignal.value(); // Get current value
 mySignal._set(100); // Set new value
 
-// Signal mapping (Functor)
+// Transform signals
 const doubled = mySignal.map(x => x * 2);
 
 // Subscribe to changes
@@ -728,28 +724,12 @@ const unsubscribe = mySignal.subscribe((newValue) => {
 });
 ```
 
-### Effect Monad
+
+
+### Time Utilities
 
 ```tsx
-import { effect, pureEffect, flatten, sequence } from 'resig.js';
-
-// Create effect
-const myEffect = effect('initial');
-
-// Monadic composition
-const chainedEffect = myEffect
-  .bind(value => pureEffect(`Step 1: ${value}`))
-  .bind(value => pureEffect(`Step 2: ${value}`));
-
-// Sequence multiple effects
-const effects = [effect('a'), effect('b'), effect('c')];
-const sequenced = sequence(effects); // Effect<string[]>
-```
-
-### Time Algebra
-
-```tsx
-import { time, debounce, throttle, timeout } from 'resig.js';
+import { time, debounce, throttle } from 'resig.js';
 
 // Time-based operations
 const timeSignal = time('initial');
@@ -762,12 +742,12 @@ const debouncedSignal = debounce(300, mySignal);
 const throttledSignal = throttle(1000, mySignal);
 ```
 
-### Fetch Algebra
+### HTTP Utilities
 
 ```tsx
 import { fetch, get, post } from 'resig.js';
 
-// Custom fetch
+// Custom fetch operations
 const userFetch = fetch(async () => {
   const response = await window.fetch('/api/user');
   return response.json();
@@ -781,7 +761,7 @@ const createUser = post('/api/users', { name: 'John' });
 const resilientFetch = userFetch.retry(3).cache('user-cache', 60000);
 ```
 
-### State Machine Algebra
+### State Machine Utilities
 
 ```tsx
 import { machine, fsm, combine } from 'resig.js';
@@ -795,7 +775,7 @@ const simpleMachine = machine('idle', (state, action) => {
   }
 });
 
-// Finite state machine with explicit transitions
+// State machine with explicit transitions
 const fsmMachine = fsm('idle', [
   { from: 'idle', to: 'loading', on: 'start' },
   { from: 'loading', to: 'success', on: 'success' },
@@ -1085,7 +1065,7 @@ const [state, send] = useMachine('idle', (state, action) => {
 ### From Context + useReducer
 
 ```tsx
-// ❌ Before
+// ❌ Before - Complex setup with Context and useReducer
 const AppContext = createContext();
 
 const appReducer = (state, action) => {
@@ -1105,12 +1085,54 @@ function AppProvider({ children }) {
   );
 }
 
-// ✅ After (Signal-Σ)
-// No context needed! Just use signals directly
-const [user, setUser] = useSignal(null);
-const [theme, setTheme] = useSignal('light');
+function App() {
+  return (
+    <AppProvider>
+      <Header />
+      <Main />
+    </AppProvider>
+  );
+}
 
-// Signals are automatically available across components
+function Header() {
+  const { state, dispatch } = useContext(AppContext);
+  return (
+    <div>
+      <span>Welcome {state.user?.name}</span>
+      <button onClick={() => dispatch({ type: 'SET_THEME', payload: 'dark' })}>
+        Switch to {state.theme === 'light' ? 'dark' : 'light'} theme
+      </button>
+    </div>
+  );
+}
+
+// ✅ After (Signal-Σ) - Simple signals, no setup needed
+// Create signals in a shared file (e.g., store.js)
+export const [user, setUser] = useSignal(null);
+export const [theme, setTheme] = useSignal('light');
+
+// Use directly in any component - no providers or context!
+function Header() {
+  return (
+    <div>
+      <span>Welcome {user?.name}</span>
+      <button onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>
+        Switch to {theme === 'light' ? 'dark' : 'light'} theme
+      </button>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <div>
+      <Header />
+      <Main />
+    </div>
+  );
+}
+
+// Signals work across any component automatically!
 // No providers, no context, no prop drilling!
 ```
 
@@ -1221,28 +1243,28 @@ const performantSignal = applyPlugin(
 
 ## 🏗️ **Architecture**
 
-Signal-Σ is built on solid mathematical foundations using category theory and algebraic structures.
+Signal-Σ is built with a clean, modular architecture for reliability and performance.
 
 ```
 src/
 ├── core/
-│   ├── signal.ts      # Core Signal Functor implementation
-│   └── effect.ts      # Effect Monad for side effect composition
+│   ├── signal.ts      # Core Signal implementation
+│   └── effect.ts      # Effect handling for side effect composition
 ├── algebras/
-│   ├── time.ts        # Time algebra (delay, debounce, throttle, intervals)
-│   ├── fetch.ts       # Network algebra (HTTP operations, caching, retry)
-│   └── state.ts       # State algebra (machines, FSM, transitions)
+│   ├── time.ts        # Time utilities (delay, debounce, throttle, intervals)
+│   ├── fetch.ts       # Network utilities (HTTP operations, caching, retry)
+│   └── state.ts       # State utilities (machines, transitions)
 ├── react/
 │   └── hooks.ts       # React integration hooks
 ├── plugins/
-│   └── index.ts       # Plugin system (zero-runtime cost functors)
+│   └── index.ts       # Plugin system for composable features
 └── types/
     └── index.ts       # TypeScript type definitions
 ```
 
-### Mathematical Foundations
+### Core Interfaces
 
-#### Signal Functor
+#### Signal Interface
 ```typescript
 interface Signal<A> {
   readonly value: () => A;
@@ -1251,11 +1273,7 @@ interface Signal<A> {
 }
 ```
 
-**Laws:**
-- **Identity**: `signal.map(id) ≡ signal`
-- **Composition**: `signal.map(f).map(g) ≡ signal.map(x => g(f(x)))`
-
-#### Effect Monad
+#### Effect Interface
 ```typescript
 interface Effect<A> extends Signal<A> {
   readonly bind: <B>(f: (a: A) => Effect<B>) => Effect<B>;
@@ -1263,14 +1281,9 @@ interface Effect<A> extends Signal<A> {
 }
 ```
 
-**Laws:**
-- **Left Identity**: `bind(pure(a), f) ≡ f(a)`
-- **Right Identity**: `bind(ma, pure) ≡ ma`
-- **Associativity**: `bind(bind(ma, f), g) ≡ bind(ma, a => bind(f(a), g))`
-
 ### Plugin Architecture
 
-Plugins are category functors that transform signals while preserving their structure:
+Plugins transform signals while preserving their behavior:
 
 ```typescript
 type Plugin<A> = (signal: Signal<A>) => Signal<A>;
@@ -1317,42 +1330,7 @@ The DevTool provides:
 | `useDebouncedSignal` | Debounced input | Custom hooks | `[immediate, setter, debounced]` |
 | `useValidatedSignal` | Form validation | Custom hooks | `[value, setter, isValid]` |
 
-### Common Patterns
 
-#### Loading States
-```tsx
-const [isLoading, setIsLoading] = useSignal(false);
-const [data, setData] = useSignal(null);
-const [error, setError] = useSignal(null);
-
-const fetchData = async () => {
-  setIsLoading(true);
-  setError(null);
-  try {
-    const result = await api.getData();
-    setData(result);
-  } catch (err) {
-    setError(err);
-  } finally {
-    setIsLoading(false);
-  }
-};
-```
-
-#### Form Handling
-```tsx
-const [formData, setFormData] = useSignal({ name: '', email: '' });
-const [errors, setErrors] = useSignal({});
-
-const isValid = useComputed(() =>
-  Object.keys(errors).length === 0 && formData.name && formData.email
-);
-
-const updateField = (field, value) => {
-  setFormData({ ...formData, [field]: value });
-  // Validate and update errors...
-};
-```
 
 ## 🤝 **Contributing**
 
@@ -1397,9 +1375,8 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 🙏 **Acknowledgments**
 
-- **Category Theory** - Mathematical foundations for reliable composition
 - **React Team** - Inspiration to improve upon hooks architecture
-- **Functional Programming Community** - Algebraic patterns and best practices
+- **Functional Programming Community** - Proven patterns and best practices
 - **Open Source Contributors** - Making reactive programming accessible
 
 ---
@@ -1412,4 +1389,4 @@ npm install resig.js
 
 **Signal-Σ: Reliable reactive programming for modern React development** 🔧⚛️
 
-*Built with category theory. Powered by algebra. Designed for developers.*
+*Built for reliability. Powered by simplicity. Designed for developers.*
