@@ -25,6 +25,8 @@
     "sandboxed",
     "transpiled",
     "typedoc",
+    "unsub",
+    "unsubscribers",
     "untracked"
   ],
   "flagWords": [],

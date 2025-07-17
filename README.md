@@ -234,6 +234,52 @@ function UserProfile() {
 }
 ```
 
+### 🤔 **Hook Comparison: useComputed vs useEffect**
+
+**Important:** Our `useEffect` is **NOT** React's useEffect! Here's the key difference:
+
+#### `useComputed<T>(compute: () => T): T`
+- **Purpose**: Derived/computed values from signals
+- **Returns**: The computed value directly
+- **Reactivity**: Automatic - recomputes when dependencies change
+- **Use case**: Mathematical computations, data transformations, UI state
+
+```tsx
+const [count, setCount] = useSignal(10);
+const doubled = useComputed(() => count * 2); // Returns: number
+const isEven = useComputed(() => count % 2 === 0); // Returns: boolean
+```
+
+#### `useEffect<T>(initialValue: T): [T, (value: T) => void, Effect<T>]`
+- **Purpose**: Monadic effect composition for side effects
+- **Returns**: `[value, setValue, effectMonad]` tuple
+- **Reactivity**: Manual - you control when effects execute
+- **Use case**: Functional programming, composable side effects, effect chaining
+
+```tsx
+const [effectValue, setEffectValue, effectMonad] = useEffect('initial');
+
+// Chain effects using monadic composition
+const chainedEffect = effectMonad
+  .bind(value => {
+    setEffectValue(`Step 1: ${value}`);
+    return effectMonad;
+  })
+  .bind(value => {
+    setEffectValue(`Step 2: ${value}`);
+    return effectMonad;
+  });
+```
+
+#### When to Use Which?
+
+| Use `useComputed` when: | Use `useEffect` when: |
+|------------------------|----------------------|
+| ✅ Deriving values from signals | ✅ Composing side effects |
+| ✅ Mathematical computations | ✅ Functional programming patterns |
+| ✅ UI state transformations | ✅ Effect chaining with `.bind()` |
+| ✅ Automatic reactivity needed | ✅ Manual effect control needed |
+
 ### Advanced Hooks
 
 #### `useDebouncedSignal<T>(initialValue: T, delay: number): [T, (value: T) => void, T]`
@@ -306,6 +352,85 @@ function ThemeSelector() {
       <option value="dark">Dark</option>
     </select>
   );
+}
+```
+
+### Async Hooks
+
+#### `useAsyncSignal<T>(asyncFn: () => Promise<T>, initialValue?: T)`
+Manual async data fetching with refetch and optimistic updates.
+
+```tsx
+function UserProfile() {
+  const [userId, setUserId] = useSignal(1);
+
+  const [userState, refetchUser, setUser] = useAsyncSignal(async () => {
+    const response = await fetch(`/api/users/${userId}`);
+    return response.json();
+  });
+
+  return (
+    <div>
+      {userState.loading && <div>Loading...</div>}
+      {userState.error && <div>Error: {userState.error.message}</div>}
+      {userState.data && <div>User: {userState.data.name}</div>}
+      <button onClick={refetchUser}>Refetch</button>
+      <button onClick={() => setUser({...userState.data, name: 'Updated'})}>
+        Optimistic Update
+      </button>
+    </div>
+  );
+}
+```
+
+#### `useAsyncComputed<T>(asyncCompute: () => Promise<T>, deps: unknown[])`
+Async computed values with dependency arrays.
+
+```tsx
+function PostsList() {
+  const [userId, setUserId] = useSignal(1);
+
+  const postsState = useAsyncComputed(async () => {
+    const response = await fetch(`/api/posts?userId=${userId}`);
+    return response.json();
+  }, [userId]); // Recomputes when userId changes
+
+  return (
+    <div>
+      {postsState.loading && <div>Loading posts...</div>}
+      {postsState.data && <div>{postsState.data.length} posts found</div>}
+    </div>
+  );
+}
+```
+
+#### `useAsyncComputedSignal<T>(asyncCompute: () => Promise<T>, deps: unknown[])`
+Returns an async computed **signal** that can be used in other computations.
+
+```tsx
+function Dashboard() {
+  const [userId, setUserId] = useSignal(1);
+
+  // Returns a signal, not just state
+  const userStatsSignal = useAsyncComputedSignal(async () => {
+    const posts = await fetch(`/api/posts?userId=${userId}`).then(r => r.json());
+    return { totalPosts: posts.length, avgLength: posts.reduce(...) / posts.length };
+  }, [userId]);
+
+  // Other signals can use this async computed signal
+  const isActiveUser = useComputed(() => {
+    const stats = userStatsSignal.value();
+    return stats.data && stats.data.totalPosts > 5;
+  });
+
+  const displayText = useComputed(() => {
+    const stats = userStatsSignal.value();
+    if (stats.loading) return "Computing...";
+    if (stats.error) return "Error occurred";
+    return `User has ${stats.data.totalPosts} posts`;
+  });
+
+  return <div>{displayText} - Active: {isActiveUser ? 'Yes' : 'No'}</div>;
 }
 ```
 

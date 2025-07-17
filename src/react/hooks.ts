@@ -214,6 +214,216 @@ export function usePersistentSignal<T>(
   return [value, sigRef.current._set];
 }
 
+// Hook for async signals - handles Promise-based values
+export function useAsyncSignal<T>(
+  asyncFn: () => Promise<T>,
+  initialValue?: T,
+): [
+  { data?: T; loading: boolean; error?: Error },
+  () => void, // refetch
+  (value: T) => void, // setValue (for optimistic updates)
+] {
+  const stateRef = useRef<
+    Signal<{ data?: T; loading: boolean; error?: Error }> & {
+      _set: (value: { data?: T; loading: boolean; error?: Error }) => void;
+    }
+  >();
+  const abortControllerRef = useRef<AbortController>();
+
+  if (!stateRef.current) {
+    stateRef.current = signal({
+      data: initialValue,
+      loading: false,
+      error: undefined,
+    });
+  }
+
+  const refetch = () => {
+    // Cancel previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    abortControllerRef.current = new AbortController();
+    stateRef.current!._set({
+      data: stateRef.current!.value().data,
+      loading: true,
+      error: undefined,
+    });
+
+    asyncFn()
+      .then((data) => {
+        if (!abortControllerRef.current?.signal.aborted) {
+          stateRef.current!._set({ data, loading: false, error: undefined });
+        }
+      })
+      .catch((error) => {
+        if (!abortControllerRef.current?.signal.aborted) {
+          stateRef.current!._set({
+            data: stateRef.current!.value().data,
+            loading: false,
+            error: error instanceof Error ? error : new Error(String(error)),
+          });
+        }
+      });
+  };
+
+  const setValue = (value: T) => {
+    stateRef.current!._set({ data: value, loading: false, error: undefined });
+  };
+
+  const state = useSyncExternalStore(
+    stateRef.current.subscribe,
+    stateRef.current.value,
+  );
+
+  return [state, refetch, setValue];
+}
+
+// Hook for async computed values - Simplified approach to avoid infinite loops
+// Use manual trigger pattern for now until we can implement proper dependency tracking
+export function useAsyncComputed<T>(
+  asyncCompute: () => Promise<T>,
+  deps: unknown[] = [],
+): { data?: T; loading: boolean; error?: Error } {
+  const stateRef = useRef<
+    Signal<{ data?: T; loading: boolean; error?: Error }> & {
+      _set: (value: { data?: T; loading: boolean; error?: Error }) => void;
+    }
+  >();
+  const abortControllerRef = useRef<AbortController>();
+  const lastDepsRef = useRef<unknown[]>([]);
+  const isInitializedRef = useRef(false);
+
+  if (!stateRef.current) {
+    stateRef.current = signal({
+      data: undefined,
+      loading: false,
+      error: undefined,
+    });
+  }
+
+  // Check if dependencies changed
+  const depsChanged =
+    !isInitializedRef.current ||
+    deps.length !== lastDepsRef.current.length ||
+    deps.some((dep, index) => dep !== lastDepsRef.current[index]);
+
+  if (depsChanged) {
+    isInitializedRef.current = true;
+    lastDepsRef.current = [...deps];
+
+    // Cancel previous computation
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    abortControllerRef.current = new AbortController();
+
+    // Defer state update to avoid render-time updates
+    setTimeout(() => {
+      stateRef.current!._set({
+        data: stateRef.current!.value().data,
+        loading: true,
+        error: undefined,
+      });
+
+      asyncCompute()
+        .then((data) => {
+          if (!abortControllerRef.current?.signal.aborted) {
+            stateRef.current!._set({ data, loading: false, error: undefined });
+          }
+        })
+        .catch((error) => {
+          if (!abortControllerRef.current?.signal.aborted) {
+            stateRef.current!._set({
+              data: stateRef.current!.value().data,
+              loading: false,
+              error: error instanceof Error ? error : new Error(String(error)),
+            });
+          }
+        });
+    }, 0);
+  }
+
+  const state = useSyncExternalStore(
+    stateRef.current.subscribe,
+    stateRef.current.value,
+  );
+
+  return state;
+}
+
+// Hook for async computed signals - returns a signal that can be used in other computations
+export function useAsyncComputedSignal<T>(
+  asyncCompute: () => Promise<T>,
+  deps: unknown[] = [],
+): Signal<{ data?: T; loading: boolean; error?: Error }> & {
+  _set: (value: { data?: T; loading: boolean; error?: Error }) => void;
+} {
+  const stateRef = useRef<
+    Signal<{ data?: T; loading: boolean; error?: Error }> & {
+      _set: (value: { data?: T; loading: boolean; error?: Error }) => void;
+    }
+  >();
+  const abortControllerRef = useRef<AbortController>();
+  const lastDepsRef = useRef<unknown[]>([]);
+  const isInitializedRef = useRef(false);
+
+  if (!stateRef.current) {
+    stateRef.current = signal({
+      data: undefined,
+      loading: false,
+      error: undefined,
+    });
+  }
+
+  // Check if dependencies changed
+  const depsChanged =
+    !isInitializedRef.current ||
+    deps.length !== lastDepsRef.current.length ||
+    deps.some((dep, index) => dep !== lastDepsRef.current[index]);
+
+  if (depsChanged) {
+    isInitializedRef.current = true;
+    lastDepsRef.current = [...deps];
+
+    // Cancel previous computation
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    abortControllerRef.current = new AbortController();
+
+    // Defer state update to avoid render-time updates
+    setTimeout(() => {
+      stateRef.current!._set({
+        data: stateRef.current!.value().data,
+        loading: true,
+        error: undefined,
+      });
+
+      asyncCompute()
+        .then((data) => {
+          if (!abortControllerRef.current?.signal.aborted) {
+            stateRef.current!._set({ data, loading: false, error: undefined });
+          }
+        })
+        .catch((error) => {
+          if (!abortControllerRef.current?.signal.aborted) {
+            stateRef.current!._set({
+              data: stateRef.current!.value().data,
+              loading: false,
+              error: error instanceof Error ? error : new Error(String(error)),
+            });
+          }
+        });
+    }, 0);
+  }
+
+  return stateRef.current;
+}
+
 // Legacy aliases for backward compatibility
 export const use = useSignal;
 export const computed = useComputed;

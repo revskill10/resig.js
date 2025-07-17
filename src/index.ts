@@ -42,6 +42,9 @@ import {
   machine$,
   time$,
   use,
+  useAsyncComputed,
+  useAsyncComputedSignal,
+  useAsyncSignal,
   useComputed,
   useDebouncedSignal,
   useDerived,
@@ -82,4 +85,7 @@ export default {
   useValidatedSignal,
   useDebouncedSignal,
   usePersistentSignal,
+  useAsyncSignal,
+  useAsyncComputed,
+  useAsyncComputedSignal,
 };

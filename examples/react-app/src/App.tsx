@@ -7,17 +7,38 @@ import EffectDemo from './components/EffectDemo';
 import StateMachineDemo from './components/StateMachineDemo';
 import FetchDemo from './components/FetchDemo';
 import AdvancedDemo from './components/AdvancedDemo';
+import AsyncSignalDemo from './components/AsyncSignalDemo';
+import EffectMonadDemo from './components/EffectMonadDemo';
+import SignalDevTool, { SignalDevToolAPI } from './components/SignalDevTool';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
   return (
-    <div className="container">
-      <h1>Signal-Σ React Example</h1>
+    <div>
+      {/* DevTool - Sticky at the very top */}
+      <SignalDevTool />
+
+      <div className="container">
+        <h1>Signal-Σ React Example</h1>
       <p>
         A comprehensive demonstration of the category-theoretic signal library that eliminates React hooks and dependency arrays completely.
       </p>
 
-      <BasicSignalDemo />
-      <ComputedSignalDemo />
+      <ErrorBoundary componentName="BasicSignalDemo">
+        <BasicSignalDemo />
+      </ErrorBoundary>
+
+      <ErrorBoundary componentName="ComputedSignalDemo">
+        <ComputedSignalDemo />
+      </ErrorBoundary>
+
+      <ErrorBoundary componentName="AsyncSignalDemo">
+        <AsyncSignalDemo />
+      </ErrorBoundary>
+
+      <ErrorBoundary componentName="EffectMonadDemo">
+        <EffectMonadDemo />
+      </ErrorBoundary>
       <UseEffectReplacementDemo />
       <PluginDemo />
       <ExcelGridDemo />
@@ -62,6 +83,21 @@ function App() {
           <li><strong>Network Algebra:</strong> React-Query replacement with automatic dependency tracking</li>
           <li><strong>Advanced Features:</strong> Debouncing, validation, persistence, and more</li>
         </ul>
+      </div>
+
+      {/* DevTool Test Button */}
+      <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded">
+        <button
+          onClick={() => {
+            SignalDevToolAPI.registerSignal('test-signal', Math.random(), 'signal');
+            SignalDevToolAPI.executeEffect('test-effect', 'Manual test event triggered');
+          }}
+          className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600"
+        >
+          🧪 Test DevTool (Add Events)
+        </button>
+      </div>
+
       </div>
     </div>
   );
